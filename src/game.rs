@@ -8,6 +8,9 @@ use crate::block::{
 pub const FIELD_WIDTH: usize = 11 + 2 + 2;
 pub const FIELD_HEIGHT: usize = 20 + 1 + 1;
 pub const NEXT_LENGTH: usize = 3;
+
+pub const SCORE_TABLE: [usize; 5] = [0, 100, 200, 400, 800];
+
 pub type Field = [[BlockColor; FIELD_WIDTH]; FIELD_HEIGHT];
 
 #[derive(Clone, Copy)]
@@ -34,6 +37,9 @@ pub struct Game {
 
 	pub next: VecDeque<BlockShape>,
 	pub next_buf: VecDeque<BlockShape>,
+
+	pub score: usize,
+	pub line: usize,
 }
 
 impl Game {
@@ -69,6 +75,8 @@ impl Game {
 			holded: false,
 			next: gen_block_7().into(),
 			next_buf: gen_block_7().into(),
+			score: 0,
+			line: 0,
 		};
 
 		spawn_block(&mut game).ok();
@@ -100,6 +108,8 @@ pub fn draw(
 		block,
 		hold,
 		next,
+		score,
+		line,
 		..
 	}: &Game,
 ) {
@@ -137,8 +147,14 @@ pub fn draw(
 			println!();
 		}
 	}
+	//scoreを描写
+	println!("\x1b[7;28HSCORE:{}", score);
 
-	println!("\x1b[H"); //カーソルを先頭に移動
+	//lineを描写
+	println!("\x1b[8;28HLINE:{}", line);
+
+	//カーソルを先頭に移動
+	println!("\x1b[H");
 	for y in 0..FIELD_HEIGHT - 1 {
 		for x in 1..FIELD_WIDTH - 1 {
 			print!("{}", COLOR_TABLE[field_buf[y][x]]);
@@ -176,7 +192,8 @@ pub fn hold(game: &mut Game) {
 }
 
 //ラインの削除処理
-pub fn erase_line(field: &mut Field) {
+pub fn erase_line(field: &mut Field) -> usize {
+	let mut erase_count = 0;
 	for y in 1..FIELD_HEIGHT - 2 {
 		let mut can_erase = true;
 		for x in 2..FIELD_WIDTH - 2 {
@@ -187,11 +204,13 @@ pub fn erase_line(field: &mut Field) {
 		}
 
 		if can_erase {
+			erase_count += 1;
 			for y2 in (2..=y).rev() {
 				field[y2] = field[y2 - 1];
 			}
 		}
 	}
+	erase_count
 }
 
 pub fn move_block(game: &mut Game, new_pos: Position) {
@@ -296,10 +315,14 @@ pub fn super_rotation(field: &Field, pos: &Position, block: &BlockShape) -> Resu
 pub fn landing(game: &mut Game) -> Result<(), ()> {
 	fix_block(game);
 
-	erase_line(&mut game.field);
+	//ラインを消去して、スコアを加算
+	let line_count = erase_line(&mut game.field);
+	game.score += SCORE_TABLE[line_count];
+
+	//合計消去ライン数を加算する
+	game.line += line_count;
 
 	spawn_block(game)?;
-
 	//再びホールド可能にする
 	game.holded = false;
 	Ok(())
