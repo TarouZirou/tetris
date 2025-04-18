@@ -22,6 +22,8 @@ pub struct Game {
 	pub field: Field,
 	pub pos: Position,
 	pub block: BlockShape,
+	pub hold: Option<BlockShape>,
+	pub holded: bool,
 }
 
 impl Game {
@@ -53,6 +55,8 @@ impl Game {
 			],
 			pos: Position::init(),
 			block: BLOCKS[rand::random::<BlockKind>() as usize],
+			hold: None,
+			holded: false,
 		}
 	}
 }
@@ -74,7 +78,15 @@ pub fn is_collision(field: &Field, pos: &Position, block: &BlockShape) -> bool {
 }
 
 #[allow(clippy::needless_range_loop)]
-pub fn draw(Game { field, pos, block }: &Game) {
+pub fn draw(
+	Game {
+		field,
+		pos,
+		block,
+		hold,
+		..
+	}: &Game,
+) {
 	let mut field_buf = *field;
 	let ghost_pos = ghost_pos(field, pos, block);
 
@@ -94,6 +106,18 @@ pub fn draw(Game { field, pos, block }: &Game) {
 		}
 		println!();
 	}
+
+	//ホールドを描写
+	println!("\x1b[2;28HHOLD");
+	if let Some(hold) = hold {
+		for y in 0..4 {
+			print!("\x1b[{};28H", y + 3);
+			for x in 0..4 {
+				print!("{}", COLOR_TABLE[hold[y][x]]);
+			}
+			println!();
+		}
+	}
 }
 
 pub fn fix_block(game: &mut Game) {
@@ -104,6 +128,24 @@ pub fn fix_block(game: &mut Game) {
 			}
 		}
 	}
+}
+
+//ホールド機能
+pub fn hold(game: &mut Game) {
+	if game.holded {
+		return;
+	}
+
+	if let Some(mut hold) = game.hold {
+		std::mem::swap(&mut hold, &mut game.block);
+		game.hold = Some(hold);
+		game.pos = Position::init();
+	} else {
+		game.hold = Some(game.block);
+		spawn_block(game).ok();
+	}
+
+	game.holded = true;
 }
 
 //ラインの削除処理
@@ -230,6 +272,9 @@ pub fn landing(game: &mut Game) -> Result<(), ()> {
 	erase_line(&mut game.field);
 
 	spawn_block(game)?;
+
+	//再びホールド可能にする
+	game.holded = false;
 	Ok(())
 }
 
@@ -254,5 +299,5 @@ pub fn game_over(game: &Game) {
 }
 
 pub fn quit() {
-	println!("\x1b[?25h");
+	println!("\x1b[?25h\x1b[22;28H");
 }
