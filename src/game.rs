@@ -131,6 +131,7 @@ pub fn move_block(game: &mut Game, new_pos: Position) {
 	}
 }
 
+#[allow(clippy::needless_range_loop)]
 pub fn rotate_right(game: &mut Game) {
 	let mut new_shape: BlockShape = Default::default();
 	for y in 0..4 {
@@ -141,9 +142,13 @@ pub fn rotate_right(game: &mut Game) {
 
 	if !is_collision(&game.field, &game.pos, &new_shape) {
 		game.block = new_shape;
+	} else if let Ok(new_pos) = super_rotation(&game.field, &game.pos, &new_shape) {
+		game.pos = new_pos;
+		game.block = new_shape;
 	}
 }
 
+#[allow(clippy::needless_range_loop)]
 pub fn rotate_left(game: &mut Game) {
 	let mut new_shape: BlockShape = Default::default();
 	for y in 0..4 {
@@ -153,6 +158,9 @@ pub fn rotate_left(game: &mut Game) {
 	}
 
 	if !is_collision(&game.field, &game.pos, &new_shape) {
+		game.block = new_shape;
+	} else if let Ok(new_pos) = super_rotation(&game.field, &game.pos, &new_shape) {
+		game.pos = new_pos;
 		game.block = new_shape;
 	}
 }
@@ -185,6 +193,34 @@ pub fn hard_drop(game: &mut Game) {
 	}
 	let new_pos = game.pos;
 	move_block(game, new_pos);
+}
+
+//スーパーローテーションをおこなう
+pub fn super_rotation(field: &Field, pos: &Position, block: &BlockShape) -> Result<Position, ()> {
+	let diff_pos = [
+		Position {
+			x: pos.x,
+			y: pos.y.checked_sub(1).unwrap_or(pos.y),
+		},
+		Position {
+			x: pos.x + 1,
+			y: pos.y,
+		},
+		Position {
+			x: pos.x,
+			y: pos.y + 1,
+		},
+		Position {
+			x: pos.x.checked_sub(1).unwrap_or(pos.x),
+			y: pos.y + 1,
+		},
+	];
+	for pos in diff_pos {
+		if !is_collision(&field, &pos, &block) {
+			return Ok(pos);
+		}
+	}
+	Err(())
 }
 
 //落下したときの処理
