@@ -1,9 +1,12 @@
+use std::collections::VecDeque;
+
 use crate::block::{
 	BLOCKS, BlockColor, BlockKind, BlockShape, COLOR_TABLE, block_kind, block_kind::WALL as W,
 };
 
 pub const FIELD_WIDTH: usize = 11 + 2 + 2;
 pub const FIELD_HEIGHT: usize = 20 + 1 + 1;
+pub const NEXT_LENGTH: usize = 3;
 pub type Field = [[BlockColor; FIELD_WIDTH]; FIELD_HEIGHT];
 
 #[derive(Clone, Copy)]
@@ -24,6 +27,7 @@ pub struct Game {
 	pub block: BlockShape,
 	pub hold: Option<BlockShape>,
 	pub holded: bool,
+	pub next: VecDeque<BlockShape>,
 }
 
 impl Game {
@@ -57,6 +61,13 @@ impl Game {
 			block: BLOCKS[rand::random::<BlockKind>() as usize],
 			hold: None,
 			holded: false,
+			next: {
+				let mut deque = VecDeque::new();
+				for _ in 0..NEXT_LENGTH {
+					deque.push_back(BLOCKS[rand::random::<BlockKind>() as usize]);
+				}
+				deque
+			},
 		}
 	}
 }
@@ -84,6 +95,7 @@ pub fn draw(
 		pos,
 		block,
 		hold,
+		next,
 		..
 	}: &Game,
 ) {
@@ -99,15 +111,7 @@ pub fn draw(
 		}
 	}
 
-	println!("\x1b[H"); //カーソルを先頭に移動
-	for y in 0..FIELD_HEIGHT - 1 {
-		for x in 1..FIELD_WIDTH - 1 {
-			print!("{}", COLOR_TABLE[field_buf[y][x]]);
-		}
-		println!();
-	}
-
-	//ホールドを描写
+	//holdを描写
 	println!("\x1b[2;28HHOLD");
 	if let Some(hold) = hold {
 		for y in 0..4 {
@@ -117,6 +121,25 @@ pub fn draw(
 			}
 			println!();
 		}
+	}
+
+	//nextを描写
+	for (i, next) in next.iter().enumerate() {
+		for y in 0..4 {
+			print!("\x1b[{};28H", i * 4 + y + 9);
+			for x in 0..4 {
+				print!("{}", COLOR_TABLE[next[y][x]]);
+			}
+			println!();
+		}
+	}
+
+	println!("\x1b[H"); //カーソルを先頭に移動
+	for y in 0..FIELD_HEIGHT - 1 {
+		for x in 1..FIELD_WIDTH - 1 {
+			print!("{}", COLOR_TABLE[field_buf[y][x]]);
+		}
+		println!();
 	}
 }
 
@@ -280,24 +303,23 @@ pub fn landing(game: &mut Game) -> Result<(), ()> {
 
 pub fn spawn_block(game: &mut Game) -> Result<(), ()> {
 	game.pos = Position::init();
-	game.block = BLOCKS[rand::random::<BlockKind>() as usize];
-	//let new_pos = Position::init();
-	//let new_block = BLOCKS[rand::random::<BlockKind>() as usize];
+	game.block = game.next.pop_front().unwrap();
+	game
+		.next
+		.push_back(BLOCKS[rand::random::<BlockKind>() as usize]);
 	if is_collision(&game.field, &game.pos, &game.block) {
 		Err(())
 	} else {
-		//game.pos = new_pos;
-		//game.block = new_block;
 		Ok(())
 	}
 }
 
 pub fn game_over(game: &Game) {
 	draw(game);
-	println!("GAME OVER!");
+	println!("\x1b[23;28HGAME OVER!");
 	println!("press `q` key to exit.");
 }
 
 pub fn quit() {
-	println!("\x1b[?25h\x1b[22;28H");
+	println!("\x1b[?25h\x1b[25;28H");
 }
