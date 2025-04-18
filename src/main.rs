@@ -1,7 +1,6 @@
 mod block;
 mod game;
 
-use block::{BLOCKS, BlockKind};
 use game::*;
 use getch_rs::{Getch, Key};
 use std::sync::{Arc, Mutex};
