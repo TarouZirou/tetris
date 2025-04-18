@@ -162,7 +162,7 @@ pub fn hard_drop(game: &mut Game) {
 			x: game.pos.x,
 			y: game.pos.y + 1,
 		};
-		!is_collision(&game.field, &game.pos, &game.block)
+		!is_collision(&game.field, &new_pos, &game.block)
 	} {
 		game.pos.y += 1;
 	}

@@ -30,14 +30,8 @@ fn main() {
 				if !is_collision(&game.field, &new_pos, &game.block) {
 					game.pos = new_pos;
 				} else {
-					//ブロックを固定
-					fix_block(&mut game);
-
-					//ラインの削除処理
-					erase_line(&mut game.field);
-
-					//プロックを生成
-					if spawn_block(&mut game).is_err() {
+					//ブロックが落下したときの処理
+					if landing(&mut game).is_err() {
 						game_over(&game);
 						break;
 					}
@@ -53,6 +47,15 @@ fn main() {
 		match g.getch() {
 			Ok(Key::Char('q')) => {
 				break;
+			}
+			Ok(Key::Char('w')) => {
+				let mut game = game.lock().unwrap();
+				hard_drop(&mut game);
+				if landing(&mut game).is_err() {
+					game_over(&game);
+					break;
+				}
+				draw(&game);
 			}
 			Ok(Key::Char('a')) => {
 				let mut game = game.lock().unwrap();
