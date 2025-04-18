@@ -2,6 +2,8 @@ use block_kind::{I, J, L, O, S, T, Z};
 use rand::{
 	Rng,
 	distributions::{Distribution, Standard},
+	seq::SliceRandom,
+	thread_rng,
 };
 
 pub type BlockColor = usize;
@@ -21,17 +23,19 @@ pub mod block_kind {
 
 pub const COLOR_TABLE: [&str; 10] = [
 	"\x1b[48;2;000;000;000m  ", //none
-	"\x1b[48;2;127;127;127m__", //wall
+	"\x1b[48;2;128;128;128m__", //wall
 	"\x1b[48;2;000;000;000m[]", //ghost
 	"\x1b[48;2;000;255;255m__", //I
 	"\x1b[48;2;255;255;000m__", //O
-	"\x1b[48;2;000;127;000m__", //S
+	"\x1b[48;2;000;128;000m__", //S
 	"\x1b[48;2;255;000;000m__", //Z
 	"\x1b[48;2;000;000;255m__", //J
-	"\x1b[48;2;255;127;000m__", //L
+	"\x1b[48;2;255;128;000m__", //L
 	"\x1b[48;2;207;000;255m__", //T
 ];
 
+const BLOCK_KIND_MAX: usize = 7;
+#[derive(Clone, Copy)]
 pub enum BlockKind {
 	I,
 	O,
@@ -43,7 +47,7 @@ pub enum BlockKind {
 }
 
 pub type BlockShape = [[usize; 4]; 4];
-pub const BLOCKS: [BlockShape; 7] = [
+pub const BLOCKS: [BlockShape; BLOCK_KIND_MAX] = [
 	[[0, 0, 0, 0], [0, 0, 0, 0], [I, I, I, I], [0, 0, 0, 0]],
 	[[0, 0, 0, 0], [0, O, O, 0], [0, O, O, 0], [0, 0, 0, 0]],
 	[[0, 0, 0, 0], [0, S, S, 0], [S, S, 0, 0], [0, 0, 0, 0]],
@@ -52,6 +56,21 @@ pub const BLOCKS: [BlockShape; 7] = [
 	[[0, 0, 0, 0], [0, 0, L, 0], [L, L, L, 0], [0, 0, 0, 0]],
 	[[0, 0, 0, 0], [0, T, 0, 0], [T, T, T, 0], [0, 0, 0, 0]],
 ];
+
+pub fn gen_block_7() -> [BlockShape; BLOCK_KIND_MAX] {
+	let mut rng = thread_rng();
+	let mut que = [
+		BlockKind::I,
+		BlockKind::O,
+		BlockKind::S,
+		BlockKind::Z,
+		BlockKind::J,
+		BlockKind::L,
+		BlockKind::T,
+	];
+	que.shuffle(&mut rng);
+	que.map(|block| BLOCKS[block as usize])
+}
 
 impl Distribution<BlockKind> for Standard {
 	fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> BlockKind {
