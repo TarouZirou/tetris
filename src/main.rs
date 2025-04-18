@@ -20,7 +20,7 @@ fn main() {
 
 		let _ = thread::spawn(move || {
 			loop {
-				thread::sleep(time::Duration::from_millis(500));
+				thread::sleep(time::Duration::from_millis(1000));
 				let mut game = game.lock().unwrap();
 				let new_pos = Position {
 					x: game.pos.x,
