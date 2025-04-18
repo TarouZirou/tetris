@@ -76,10 +76,12 @@ pub fn is_collision(field: &Field, pos: &Position, block: &BlockShape) -> bool {
 #[allow(clippy::needless_range_loop)]
 pub fn draw(Game { field, pos, block }: &Game) {
 	let mut field_buf = *field;
+	let ghost_pos = ghost_pos(field, pos, block);
 
 	for y in 0..4 {
 		for x in 0..4 {
 			if block[y][x] != block_kind::NONE {
+				field_buf[y + ghost_pos.y][x + ghost_pos.x] = block_kind::GHOST;
 				field_buf[y + pos.y][x + pos.x] = block[y][x];
 			}
 		}
@@ -153,6 +155,21 @@ pub fn rotate_left(game: &mut Game) {
 	if !is_collision(&game.field, &game.pos, &new_shape) {
 		game.block = new_shape;
 	}
+}
+
+//ブロックの影の座標を返す
+pub fn ghost_pos(field: &Field, pos: &Position, block: &BlockShape) -> Position {
+	let mut ghost_pos = pos.clone();
+	while {
+		let new_pos = Position {
+			x: ghost_pos.x,
+			y: ghost_pos.y + 1,
+		};
+		!is_collision(&field, &new_pos, &block)
+	} {
+		ghost_pos.y += 1;
+	}
+	ghost_pos
 }
 
 //ハードドロップ
